@@ -4,9 +4,10 @@
 [ext_resource type="Script" uid="uid://iifcf0g1ikut" path="res://Warden.cs" id="1_epypp"]
 [ext_resource type="FontFile" uid="uid://bkwn3obu44f6d" path="res://led-wide.otf" id="2_epypp"]
 
-[node name="ROOT2D" type="Node2D" unique_id=1316335463 node_paths=PackedStringArray("infoDisplay")]
+[node name="ROOT2D" type="Node2D" unique_id=1316335463 node_paths=PackedStringArray("infoDisplay", "player")]
 script = ExtResource("1_epypp")
 infoDisplay = NodePath("Overlay/InfoDisplay")
+player = NodePath("AudioStreamPlayer")
 
 [node name="Overlay" type="Node2D" parent="." unique_id=304391456]
 
@@ -34,3 +35,19 @@ bbcode_enabled = true
 text = "Mmm Bezeled"
 horizontal_alignment = 1
 vertical_alignment = 1
+
+[node name="PauseButton" type="Button" parent="Overlay" unique_id=1936433465]
+offset_left = 16.0
+offset_top = 212.0
+offset_right = 136.0
+offset_bottom = 277.0
+text = "Pause"
+
+[node name="CycleButton" type="Button" parent="Overlay" unique_id=1062991701]
+offset_left = 287.0
+offset_top = 212.0
+offset_right = 407.0
+offset_bottom = 277.0
+text = "Cycle"
+
+[node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="." unique_id=1243734278]

@@ -61,13 +61,14 @@ public partial class Warden : Node2D
 
     // Music.
     [Export] public string musicPath = "music/";
+    [Export] public AudioStreamPlayer player;
 
     public override void _Ready(){
         base._Ready();
         GD.Randomize();
         
         string path = (editor) ? "res://" : Path.GetDirectoryName(OS.GetExecutablePath());
-        GD.Print(path + logPath + DateTime.Now.ToString("d.MMM.yyyy-h.mm.ss") + ".log");
+        GD.Print(path + logPath + DateTime.Now.ToString("dd.MMM.yyyy-HH.mm.ss") + ".log");
         log = Godot.FileAccess.Open(path + logPath + DateTime.Now.ToString("d.MMM.yyyy-h.mm.ss") + ".log", Godot.FileAccess.ModeFlags.Write);
         if(log == null) GD.PrintErr("Log file could not be opened.");
         log.StoreString("...Init...\n");
@@ -109,28 +110,56 @@ public partial class Warden : Node2D
         }
 
         stationIndex = (int)(GD.Randi() % stations.Count);
+        UpdatePlaying(stations[stationIndex]);
+
+        player.Finished += () => HandleSongFinished();
     }
 
     
     public override void _PhysicsProcess(double delta){
-        for(int i = 0; i < stations.Count; i++){
-            StationContext station = stations[i];
-            
-            if(stationIndex != i){
-                station.position += delta;
-                if(station.position >= station.music[station.playing].length){
-                    SongFromQueue(ref station);
+        if(player.Playing){
+            for(int i = 0; i < stations.Count; i++){
+                StationContext station = stations[i];
+                
+                if(stationIndex != i){
+                    station.position += delta;
+                    if(station.position >= station.music[station.playing].length){
+                        SongFromQueue(station);
+                    }
                 }
-            }else{
-                // TODO: Get info from current song.
             }
         }
     }
 
-    private void SongFromQueue(ref StationContext station){
+    private void HandleStationSwitch(int offset){
+        stations[stationIndex].position = player.GetPlaybackPosition();
+        stationIndex += offset;
+        stationIndex = Mathf.Abs(stationIndex % stations.Count);
+        UpdatePlaying(stations[stationIndex]);
+    }
+
+    private void HandleSongFinished(){
+        SongFromQueue(stations[stationIndex]);
+        UpdatePlaying(stations[stationIndex]);
+    }
+    
+    private void SongFromQueue(StationContext station){
         station.lastPlayed = station.playing;
         station.playing = station.queue.Dequeue();
+        station.position = 0.0d;
+        log.StoreString("[WARDEN SongFromQueue] Playing " + station.music[station.playing].name + " on " + station.name + ".\n");
+        GD.Print("[WARDEN SongFromQueue] Playing " + station.music[station.playing].name + " on " + station.name + ".");
+
         PickToQueue(ref station);
+    }
+
+    private void UpdatePlaying(StationContext station){
+        player.Stream = AudioStreamMP3.LoadFromFile(station.music[station.playing].path);
+        player.Play((float)station.position);
+        GetDisplayInfo(station.music[station.playing]);
+
+        log.StoreString("[WARDEN UpdatePlaying] Playing " + station.music[station.playing].name + " on " + station.name + ".\n");
+        GD.Print("[WARDEN UpdatePlaying] Playing " + station.music[station.playing].name + " on " + station.name + ".");
     }
     
     private void InitialQueuePopulation(ref StationContext station){
@@ -138,7 +167,8 @@ public partial class Warden : Node2D
         station.lastPlayed = station.playing;
         station.music[station.playing].skipChance = 1.0f;
         log.StoreString("[WARDEN InitialQueuePopulation] Playing " + station.music[station.playing].name + " on " + station.name + ".\n");
-        
+        GD.Print("[WARDEN InitialQueuePopulation] Playing " + station.music[station.playing].name + " on " + station.name + ".");
+
         for(int i = 0; i < queueSize; i++){
             PickToQueue(ref station);
         }
