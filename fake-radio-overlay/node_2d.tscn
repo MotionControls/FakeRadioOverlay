@@ -4,10 +4,23 @@
 [ext_resource type="Script" uid="uid://iifcf0g1ikut" path="res://Warden.cs" id="1_epypp"]
 [ext_resource type="FontFile" uid="uid://bkwn3obu44f6d" path="res://led-wide.otf" id="2_epypp"]
 
-[node name="ROOT2D" type="Node2D" unique_id=1316335463 node_paths=PackedStringArray("infoDisplay", "player")]
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_epypp"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_0hol4"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_q6r6c"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_kdubu"]
+
+[node name="ROOT2D" type="Node2D" unique_id=1316335463 node_paths=PackedStringArray("infoDisplay", "moveArea", "player", "pauseButton", "cycleButton", "volumeSlider")]
 script = ExtResource("1_epypp")
+editor = false
 infoDisplay = NodePath("Overlay/InfoDisplay")
+moveArea = NodePath("MoveArea")
 player = NodePath("AudioStreamPlayer")
+pauseButton = NodePath("Overlay/PauseButton")
+cycleButton = NodePath("Overlay/CycleButton")
+volumeSlider = NodePath("Overlay/VolumeSlider")
 
 [node name="Overlay" type="Node2D" parent="." unique_id=304391456]
 
@@ -19,8 +32,9 @@ offset_bottom = 187.0
 color = Color(0, 0, 0, 1)
 
 [node name="Bevel" type="TextureRect" parent="Overlay" unique_id=1032340326]
-offset_right = 1136.0
+offset_right = 1134.81
 offset_bottom = 204.0
+pivot_offset_ratio = Vector2(0.5, 0.5)
 texture = ExtResource("1_0e48y")
 expand_mode = 1
 
@@ -44,10 +58,31 @@ offset_bottom = 277.0
 text = "Pause"
 
 [node name="CycleButton" type="Button" parent="Overlay" unique_id=1062991701]
-offset_left = 287.0
+offset_left = 150.0
 offset_top = 212.0
-offset_right = 407.0
+offset_right = 270.0
 offset_bottom = 277.0
 text = "Cycle"
 
+[node name="VolumeSlider" type="HSlider" parent="Overlay" unique_id=2074821305]
+offset_left = 285.0
+offset_top = 212.0
+offset_right = 550.0
+offset_bottom = 277.0
+max_value = 1.0
+step = 0.01
+value = 1.0
+scrollable = false
+tick_count = 10
+ticks_on_borders = true
+ticks_position = 2
+
 [node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="." unique_id=1243734278]
+
+[node name="MoveArea" type="Button" parent="." unique_id=1745518600]
+offset_right = 8.0
+offset_bottom = 8.0
+theme_override_styles/normal = SubResource("StyleBoxEmpty_epypp")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_0hol4")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_q6r6c")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_kdubu")

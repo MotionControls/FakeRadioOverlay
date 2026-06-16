@@ -2,7 +2,6 @@ using Godot;
 using System;
 using System.IO;
 using System.Collections.Generic;
-using System.Globalization;
 
 public class MusicContext
 {
@@ -41,12 +40,16 @@ public class StationContext
 public partial class Warden : Node2D
 {
     [Export] public bool editor = true;
-    [Export] public string logPath = "logs/";
+    [Export] public string logPath = "logs\\";
     private Godot.FileAccess log;
+    private Vector2 mouseVelocity = new Vector2();
+    private Vector2 lastMousePos = new Vector2();
     
     // Text display.
     [Export] public RichTextLabel infoDisplay;
     [Export] public int charLimit = 11;
+    [Export] public Button moveArea;
+    private bool moveWindow = false;
     private string displayedText = "";
     private string completeText = "";
     private double timer = 0.0d;        // General-use timer.
@@ -54,26 +57,39 @@ public partial class Warden : Node2D
     private double infoTime = 3.0d;     // Time until swapping information.
 
     // Stations.
-    [Export] public string stationPath = "stations/";
+    [Export] public string stationPath = "stations\\";
     [Export] public int queueSize = 3;
     private List<StationContext> stations = new List<StationContext>();
     private int stationIndex = 0;
 
     // Music.
-    [Export] public string musicPath = "music/";
+    [Export] public string musicPath = "music\\";
     [Export] public AudioStreamPlayer player;
+    [Export] public Button pauseButton;
+    [Export] public Button cycleButton;
+    [Export] public HSlider volumeSlider;
 
     public override void _Ready(){
         base._Ready();
         GD.Randomize();
         
-        string path = (editor) ? "res://" : Path.GetDirectoryName(OS.GetExecutablePath());
+        string path = (editor) ? "res://" : Path.GetDirectoryName(OS.GetExecutablePath()) + "\\";
         GD.Print(path + logPath + DateTime.Now.ToString("dd.MMM.yyyy-HH.mm.ss") + ".log");
         log = Godot.FileAccess.Open(path + logPath + DateTime.Now.ToString("d.MMM.yyyy-h.mm.ss") + ".log", Godot.FileAccess.ModeFlags.Write);
+        if(log == null){
+            Console.Write("ERR: \\logs\\ must exist.\n");
+            GetTree().Quit(1);
+        }
+
         if(log == null) GD.PrintErr("Log file could not be opened.");
         log.StoreString("...Init...\n");
         
         DirAccess dir = DirAccess.Open(path + stationPath);
+        if(dir == null){
+            log.StoreString("[ERR: WARDEN _Ready] \\stations\\ must exist.");
+            GetTree().Quit(1);
+        }
+
         foreach(string filePath in dir.GetFiles()){
             if(Path.GetExtension(filePath) == ".json"){
                 Godot.FileAccess file = Godot.FileAccess.Open(path + stationPath + filePath, Godot.FileAccess.ModeFlags.Read);
@@ -112,11 +128,24 @@ public partial class Warden : Node2D
         stationIndex = (int)(GD.Randi() % stations.Count);
         UpdatePlaying(stations[stationIndex]);
 
+        TextureRect bevel = GetNode<TextureRect>("Overlay/Bevel");
+        moveArea.Position = bevel.Position;
+        moveArea.Size = bevel.Size;
+        GetWindow().InitialPosition = Window.WindowInitialPosition.Absolute;
+
         player.Finished += () => HandleSongFinished();
+        pauseButton.Pressed += () => {player.Playing = !player.Playing;};
+        cycleButton.Pressed += () => HandleStationSwitch(1);
+        volumeSlider.ValueChanged += (val) => {player.VolumeLinear = (float)val;};
+        moveArea.ButtonDown += () => {moveWindow = true;};
+        moveArea.ButtonUp += () => {moveWindow = false;};
     }
 
-    
     public override void _PhysicsProcess(double delta){
+        Vector2 mousePos = DisplayServer.MouseGetPosition();
+        mouseVelocity = mousePos - lastMousePos;
+        lastMousePos = mousePos;
+        
         if(player.Playing){
             for(int i = 0; i < stations.Count; i++){
                 StationContext station = stations[i];
@@ -128,6 +157,14 @@ public partial class Warden : Node2D
                     }
                 }
             }
+        }
+    }
+
+    public override void _Input(InputEvent @event){
+        if(moveWindow && @event is InputEventMouseMotion evt){
+            Vector2 pos = GetWindow().Position;
+            pos += evt.ScreenRelative;
+            GetWindow().Position = new Vector2I((int)pos.X, (int)pos.Y);
         }
     }
 
