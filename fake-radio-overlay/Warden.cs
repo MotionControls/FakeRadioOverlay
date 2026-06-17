@@ -18,8 +18,18 @@ public class MusicContext
         album = _album;
         path = _path;
 
-        AudioStream temp = AudioStreamMP3.LoadFromFile(path);
+        AudioStream temp = GetAudioStream(path);
         length = temp.GetLength();
+    }
+
+    public static AudioStream GetAudioStream(string path){
+        switch(path.GetExtension()){
+            case "mp3":
+                return AudioStreamMP3.LoadFromFile(path);
+            case "wav":
+                return AudioStreamWav.LoadFromFile(path);
+        }
+        return null;
     }
 }
 
@@ -227,7 +237,7 @@ public partial class Warden : Node2D
     }
 
     private void UpdatePlaying(StationContext station){
-        player.Stream = AudioStreamMP3.LoadFromFile(station.music[station.playing].path);
+        player.Stream = MusicContext.GetAudioStream(station.music[station.playing].path);
         player.Play((float)station.position);
         GetDisplayInfo(station.music[station.playing]);
 
@@ -274,5 +284,9 @@ public partial class Warden : Node2D
         scroll = false;
         stilled = false;
         timer = 0.0d;
+    }
+
+    private void CreateAudioStream(string path){
+
     }
 }
