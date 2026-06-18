@@ -8,13 +8,9 @@
 
 [sub_resource type="Theme" id="Theme_q6r6c"]
 
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_d21ai"]
-
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_rj586"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_4d7sh"]
-
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_ir8iy"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_hqns4"]
 
@@ -73,7 +69,7 @@ offset_right = 22.0
 offset_bottom = 48.0
 theme_override_styles/normal = ExtResource("4_q6r6c")
 theme_override_styles/pressed = ExtResource("5_kdubu")
-theme_override_styles/hover = SubResource("StyleBoxEmpty_d21ai")
+theme_override_styles/hover = ExtResource("4_q6r6c")
 theme_override_styles/disabled = SubResource("StyleBoxEmpty_rj586")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_4d7sh")
 
@@ -84,7 +80,7 @@ offset_right = 47.0
 offset_bottom = 48.0
 theme_override_styles/normal = ExtResource("4_q6r6c")
 theme_override_styles/pressed = ExtResource("5_kdubu")
-theme_override_styles/hover = SubResource("StyleBoxEmpty_ir8iy")
+theme_override_styles/hover = ExtResource("4_q6r6c")
 theme_override_styles/disabled = SubResource("StyleBoxEmpty_hqns4")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_x0ka3")
 
