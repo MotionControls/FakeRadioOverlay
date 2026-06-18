@@ -3,50 +3,6 @@ using System;
 using System.IO;
 using System.Collections.Generic;
 
-public class MusicContext
-{
-    public string name = "PLACEHOLDER NAME";
-    public string artist = "PLACEHOLDER ARTIST";
-    public string album = "PLACEHOLDER ALBUM";
-    public string path = null;
-    public float skipChance = 0.0f;     // Chance of song being skipped over when choosing the queue.
-    public double length = Double.MaxValue;
-
-    public MusicContext(string _name, string _artist, string _album, string _path){
-        name = _name;
-        artist = _artist;
-        album = _album;
-        path = _path;
-
-        AudioStream temp = GetAudioStream(path);
-        length = temp.GetLength();
-    }
-
-    public static AudioStream GetAudioStream(string path){
-        switch(path.GetExtension()){
-            case "mp3":
-                return AudioStreamMP3.LoadFromFile(path);
-            case "wav":
-                return AudioStreamWav.LoadFromFile(path);
-        }
-        return null;
-    }
-}
-
-public class StationContext
-{
-    public string name = "PLACEHOLDER";
-    public double position = 0.0d;
-    public List<MusicContext> music = new List<MusicContext>();
-    public int playing = 0;
-    public int lastPlayed = 0;
-    public Queue<int> queue = new Queue<int>();   // List of indices.
-
-    public StationContext(string _name){
-        name = _name;
-    }
-}
-
 public partial class Warden : Node2D
 {
     [Export] public string logPath = "logs";
@@ -80,6 +36,7 @@ public partial class Warden : Node2D
     [Export] public Button pauseButton;
     [Export] public Button cycleButton;
     [Export] public HSlider volumeSlider;
+    private List<string> music = [];
 
     public override void _Ready(){
         base._Ready();
@@ -113,40 +70,30 @@ public partial class Warden : Node2D
             GetTree().Quit(1);
         }
 
+        Godot.FileAccess file = Godot.FileAccess.Open(path + stationPath + "comp.txt", Godot.FileAccess.ModeFlags.Read);
+        while(file.GetPosition() < file.GetLength()){
+            string[] line = file.GetLine().Split("//");
+            music.Add(musicPath + line[1]);
+        }
+        
         foreach(string filePath in dir.GetFiles()){
-            if(Path.GetExtension(filePath) == ".json"){
-                Godot.FileAccess file = Godot.FileAccess.Open(path + stationPath + filePath, Godot.FileAccess.ModeFlags.Read);
-                Godot.Collections.Array<Godot.Collections.Dictionary<string, string>> arr = (Godot.Collections.Array<Godot.Collections.Dictionary<string, string>>)Json.ParseString(file.GetAsText());
-                if(arr != null){
-                    string stationName = Path.GetFileNameWithoutExtension(filePath);
-                    log.StoreString("[WARDEN _Ready] Found station " + stationName + ".\n");
+            if(Path.GetExtension(filePath) == ".txt"){
+                file = Godot.FileAccess.Open(path + stationPath + filePath, Godot.FileAccess.ModeFlags.Read);
+                string stationName = Path.GetFileNameWithoutExtension(filePath);
+                if(stationName != "comp"){
                     StationContext station = new StationContext(stationName);
-                    
-                    foreach(Godot.Collections.Dictionary<string, string> dict in arr){
-                        string musicFilePath = path + musicPath + dict["path"];
-                        Godot.FileAccess musicFile = Godot.FileAccess.Open(musicFilePath, Godot.FileAccess.ModeFlags.Read);
-                        if(musicFile != null){
-                            log.StoreString("[WARDEN _Ready] Found " + dict["path"] + ".\n");
-                            
-                            string musicName = dict["name"];
-                            string musicArtist = dict["artist"];
-                            string musicAlbum = dict["album"];
-                            
-                            station.music.Add(new MusicContext(musicName, musicArtist, musicAlbum, musicFilePath));
-                        }else{
-                            log.StoreString("[WARDEN _Ready] Couldn't open " + musicFilePath + ".\n");
-                        }
+                    foreach(string strIndex in file.GetLine().Split(',')){
+                        station.music.Add(new MusicContext(strIndex.ToInt()));
                     }
 
-                    InitialQueuePopulation(ref station);
+                    station.InitialQueuePopulation();
+                    station.ProcessSongInfo(music[station.music[station.playing].index]);
                     stations.Add(station);
-                }else{
-                    GD.PrintErr("Failed to parse " + filePath);
                 }
-
-                file.Close();
             }
         }
+
+        file.Close();
 
         stationIndex = (int)(GD.Randi() % stations.Count);
         UpdatePlaying(stations[stationIndex]);
@@ -198,7 +145,7 @@ public partial class Warden : Node2D
                 
                 if(stationIndex != i){
                     station.position += delta;
-                    if(station.position >= station.music[station.playing].length){
+                    if(station.position >= station.length){
                         SongFromQueue(station);
                     }
                 }
@@ -230,63 +177,32 @@ public partial class Warden : Node2D
         station.lastPlayed = station.playing;
         station.playing = station.queue.Dequeue();
         station.position = 0.0d;
-        log.StoreString("[WARDEN SongFromQueue] Playing " + station.music[station.playing].name + " on " + station.name + ".\n");
-        GD.Print("[WARDEN SongFromQueue] Playing " + station.music[station.playing].name + " on " + station.name + ".");
+        station.ProcessSongInfo(music[station.music[station.playing].index]);
 
-        PickToQueue(ref station);
+        log.StoreString("[WARDEN SongFromQueue] Playing " + station.title + " on " + station.name + ".\n");
+        GD.Print("[WARDEN SongFromQueue] Playing " + station.title + " on " + station.name + ".");
+
+        station.PickToQueue();
     }
 
     private void UpdatePlaying(StationContext station){
-        player.Stream = MusicContext.GetAudioStream(station.music[station.playing].path);
+        AudioStreamMP3 stream = new AudioStreamMP3();
+        stream.Data = Godot.FileAccess.GetFileAsBytes(music[station.music[station.playing].index]);
+        player.Stream = stream;
         player.Play((float)station.position);
-        GetDisplayInfo(station.music[station.playing]);
 
-        log.StoreString("[WARDEN UpdatePlaying] Playing " + station.music[station.playing].name + " on " + station.name + ".\n");
-        GD.Print("[WARDEN UpdatePlaying] Playing " + station.music[station.playing].name + " on " + station.name + ".");
+        log.StoreString("[WARDEN UpdatePlaying] Playing " + station.title + " on " + station.name + ".\n");
+        GD.Print("[WARDEN UpdatePlaying] Playing " + station.title + " on " + station.name + ".");
     }
     
-    private void InitialQueuePopulation(ref StationContext station){
-        station.playing = (int)(GD.Randi() % station.music.Count);
-        station.lastPlayed = station.playing;
-        station.music[station.playing].skipChance = 1.0f;
-        log.StoreString("[WARDEN InitialQueuePopulation] Playing " + station.music[station.playing].name + " on " + station.name + ".\n");
-        GD.Print("[WARDEN InitialQueuePopulation] Playing " + station.music[station.playing].name + " on " + station.name + ".");
-
-        for(int i = 0; i < queueSize; i++){
-            PickToQueue(ref station);
-        }
-    }
-    
-    private void PickToQueue(ref StationContext station){
-        do{
-            int index = (int)(GD.Randi() % station.music.Count);
-            if(index == station.playing || index == station.lastPlayed || station.queue.Contains(index)) continue;
-
-            float skip = GD.Randf();
-            if(station.music[index].skipChance >= 1.0f || skip <= station.music[index].skipChance){
-                log.StoreString("[WARDEN PickToQueue] Skipping " + station.music[index].name + " w/ " + station.music[index].skipChance.ToString("0.0000") + " chance.\n");
-                station.music[index].skipChance -= 1.0f / queueSize;
-            }else{
-                station.queue.Enqueue(index);
-                station.music[index].skipChance = 1.0f;
-                log.StoreString("[WARDEN PickToQueue] Queuing " + station.music[index].name + " on " + station.name + ".\n");
-                return;
-            }
-        }while(true);
-    }
-
-    private void GetDisplayInfo(MusicContext music){
+    private void GetDisplayInfo(){
         completeText = [];
-        completeText.Add(music.artist + " // " + music.name);
+        completeText.Add(stations[stationIndex].artist + " // " + stations[stationIndex].title);
         completeText.Add(stations[stationIndex].name);
         textIndex = 1;
         infoDisplay.Text = completeText[textIndex];
         scroll = false;
         stilled = false;
         timer = 0.0d;
-    }
-
-    private void CreateAudioStream(string path){
-
     }
 }
