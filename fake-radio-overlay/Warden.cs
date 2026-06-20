@@ -190,6 +190,7 @@ public partial class Warden : Node2D
         stream.Data = Godot.FileAccess.GetFileAsBytes(music[station.music[station.playing].index]);
         player.Stream = stream;
         player.Play((float)station.position);
+        GetDisplayInfo();
 
         log.StoreString("[WARDEN UpdatePlaying] Playing " + station.title + " on " + station.name + ".\n");
         GD.Print("[WARDEN UpdatePlaying] Playing " + station.title + " on " + station.name + ".");
