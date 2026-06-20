@@ -62,6 +62,7 @@ public class StationContext
         TagLib.File file = TagLib.File.Create(path);
         title = file.Tag.Title;
         artist = file.Tag.Performers[0];
-        GD.Print("[StationContext ProcessSongInfo] Retrieved " + title + ", " + artist + " for " + name + ".");
+        length = (float)file.Properties.Duration.TotalSeconds;
+        GD.Print("[StationContext ProcessSongInfo] Retrieved " + title + ", " + artist + ", " + length.ToString("0.00") + " for " + name + ".");
     }
 }
